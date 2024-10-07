@@ -15,7 +15,7 @@ migrate = Migrate(app, db)
 from flask_migrate import Migrate
 migrate = Migrate(app, db)
 
-class Patients(db.Model):
+class Patient(db.Model):
     __tablename__ = 'patients'
     Patient_ID = db.Column(db.Integer, primary_key=True)
     First_Name = db.Column(db.String(100))
@@ -26,7 +26,7 @@ class Patients(db.Model):
     Username = db.Column(db.String(50), unique=True, nullable=False)
     Password = db.Column(db.String(100), nullable=False)
 
-class Doctors(db.Model):
+class Doctor(db.Model):
     __tablename__ = 'doctors'
     Doctor_ID = db.Column(db.Integer, primary_key=True)
     First_Name = db.Column(db.String(100))
@@ -36,12 +36,13 @@ class Doctors(db.Model):
     Password = db.Column(db.String(100), nullable=False)
 
 @app.route('/register', methods=['POST'])
+@jwt_required()
 def register(s):
     data = request.get_json()
     hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
 
     if s == 'patient':
-        new_patient = Patients(
+        new_patient = Patient(
             First_Name=data['first_name'],
             Last_Name=data['last_name'],
             Date_of_Birth=data['dob'],
@@ -52,10 +53,10 @@ def register(s):
         )
         db.session.add(new_patient)
         db.session.commit()
-        return jsonify(message="Patient registered successfully"), 201 
+        return jsonify(message="Patient added"), 201 
 
     elif s == 'doctor':
-        new_doctor = Doctors(
+        new_doctor = Doctor(
             First_Name=data['first_name'],
             Last_Name=data['last_name'],
             Specialisation=data['specialisation'],
@@ -64,7 +65,7 @@ def register(s):
         )
         db.session.add(new_doctor)
         db.session.commit()
-        return jsonify(message="Doctor registered successfully"), 201
+        return jsonify(message="Doctor added"), 201
     
     else:
         return jsonify(message="Error"), 400
