@@ -75,3 +75,6 @@ CREATE TABLE Bills (
     Amount DECIMAL(10, 2),
     FOREIGN KEY (Patient_ID) REFERENCES Patients(Patient_ID) ON DELETE CASCADE
 );
+
+ALTER TABLE patients ADD COLUMN Password VARCHAR(128);
+ALTER TABLE doctors ADD COLUMN Password VARCHAR(128);
