@@ -53,6 +53,20 @@ def update_aptstatus(status, apt_id):
     finally:
         connection.close()
 
+def delete_apt(apt_id):
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = """
+                DELETE FROM appointments
+                WHERE Appointment_ID = %s
+            """
+            cursor.execute(sql, (apt_id))
+            connection.commit()
+            print("Appointment deleted successfully.")
+    finally:
+        connection.close()
+
 def create_bill(data):
     connection = get_connection()
     try:
