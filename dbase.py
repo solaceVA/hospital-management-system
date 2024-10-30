@@ -347,21 +347,3 @@ def delete_doctor(doctor_id):
         print("Doctor deleted successfully.")
     finally:
         connection.close()
-        
-def login(email, password):
-    connection = get_connection()
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT Patient_ID, Password FROM patients WHERE Email = %s", (email,))
-            patient = cursor.fetchone()
-            if patient and bcrypt.checkpw(password.encode(), patient[1]):
-                return {"user_id": patient[0], "role": "patient"}
-            
-            cursor.execute("SELECT Doctor_ID, Password FROM doctors WHERE Email = %s", (email,))
-            doctor = cursor.fetchone()
-            if doctor and bcrypt.checkpw(password.encode(), doctor[1]):
-                return {"user_id": doctor[0], "role": "doctor"}
-            
-            return {"msg": "Invalid email or password"}
-    finally:
-        connection.close()
