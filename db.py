@@ -14,25 +14,40 @@ def create_apt(data):
     try:
         with connection.cursor() as cursor:
             sql = """
-                INSERT INTO appointments (Patient_ID, Doctor_ID, Appointment_DateTime)
-                VALUES (%s, %s, %s)
+                INSERT INTO appointments (Patient_ID, Doctor_ID, Appointment_Date, Appointment_Time)
+                VALUES (%s, %s, %s, %s)
             """
-            cursor.execute(sql, (data['patient_id'], data['doctor_id'], data['datetime']))
+            cursor.execute(sql, (data['patient_id'], data['doctor_id'], data['date'], data['time']))
             connection.commit()
             print("Appointment created successfully.")
     finally:
         connection.close()
 
-def update_aptdate(datetime, apt_id):
+def update_aptdate(date, apt_id):
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
             sql = """
                 UPDATE appointments
-                SET Appointment_DateTime = %s
+                SET Appointment_Date = %s
                 WHERE Appointment_ID = %s
             """
-            cursor.execute(sql, (datetime,  apt_id))
+            cursor.execute(sql, (date,  apt_id))
+            connection.commit()
+            print("Appointment updated successfully.")
+    finally:
+        connection.close()
+
+def update_apttime(time, apt_id):
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = """
+                UPDATE appointments
+                SET Appointment_Time = %s
+                WHERE Appointment_ID = %s
+            """
+            cursor.execute(sql, (time,  apt_id))
             connection.commit()
             print("Appointment updated successfully.")
     finally:
