@@ -3,6 +3,7 @@ import pandas as pd
 from db import *
 
 def main():
+    st.title("Hospital Management System")
     tab1, tab2, tab3 = st.tabs(["Doctors", "Patients", "Appointments"])
     with tab1:
         st.header("Doctors")
