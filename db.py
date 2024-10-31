@@ -144,10 +144,10 @@ def update_status(bill_id, status):
     finally:
         connection.close()
 
-def get_totals(patients_id):
+def get_totals(patient_id):
     conn = get_connection()
     try:
-        with connection.cursor as cursor:
+        with conn.cursor as cursor:
             sql = """
                 SELECT SUM(Amount) AS Total
                 FROM bills
@@ -155,8 +155,8 @@ def get_totals(patients_id):
             """
             cursor.execute(sql,(patient_id,))
             res = cursor.fetchone()
-            total - res['Total'] if result['Total'] is not None else 0
-            return total_due
+            total = res['Total'] if res['Total'] is not None else 0
+            return total
     finally:
         conn.close()
 
