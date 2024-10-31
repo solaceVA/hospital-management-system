@@ -378,3 +378,33 @@ def delete_doctor(doctor_id):
         print("Doctor deleted successfully.")
     finally:
         connection.close()
+
+def get_all_patients():
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = "SELECT * FROM Patients"
+            cursor.execute(sql)
+            patients = cursor.fetchall()
+            if not patients: 
+                print("No patients found.")
+            else:
+                for i in patients:
+                    print(i)
+    finally:
+        connection.close()
+
+def get_all_doctors():
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = "SELECT * FROM Doctors"
+            cursor.execute(sql)
+            doctors = cursor.fetchall()
+            if not doctors: 
+                print("No doctors found.")
+            else:
+                for i in doctors:
+                    print(i)
+    finally:
+        connection.close()
