@@ -129,6 +129,22 @@ def update_status(bill_id, status):
     finally:
         connection.close()
 
+def get_totals(patients_id):
+    conn = get_connection()
+    try:
+        with connection.cursor as cursor:
+            sql = """
+                SELECT SUM(Amount) AS Total
+                FROM bills
+                Where Patient_ID = %s
+            """
+            cursor.execute(sql,(patient_id,))
+            res = cursor.fetchone()
+            total - res['Total'] if result['Total'] is not None else 0
+            return total_due
+    finally:
+        connection.close()
+
 def get_medicines():
     conn = get_connection()
     cursor = conn.cursor()
