@@ -143,7 +143,7 @@ def get_totals(patients_id):
             total - res['Total'] if result['Total'] is not None else 0
             return total_due
     finally:
-        connection.close()
+        conn.close()
 
 def get_medicines():
     conn = get_connection()
