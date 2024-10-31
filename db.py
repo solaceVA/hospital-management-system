@@ -383,14 +383,13 @@ def get_all_patients():
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM Patients"
+            sql = """
+                SELECT Patient_ID, First_Name, Last_Name, Date_Of_Birth, Gender, Phone_Number, Email, Address
+                FROM Patients;
+            """
             cursor.execute(sql)
             patients = cursor.fetchall()
-            if not patients: 
-                print("No patients found.")
-            else:
-                for i in patients:
-                    print(i)
+            return patients
     finally:
         connection.close()
 
@@ -398,13 +397,12 @@ def get_all_doctors():
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM Doctors"
+            sql = """
+                SELECT Doctor_ID, First_Name, Last_Name, Phone_Number, Email, Dept_ID 
+                FROM Doctors;
+            """
             cursor.execute(sql)
             doctors = cursor.fetchall()
-            if not doctors: 
-                print("No doctors found.")
-            else:
-                for i in doctors:
-                    print(i)
+            return doctors
     finally:
         connection.close()
