@@ -80,4 +80,4 @@ CREATE TABLE Bills (
 
 ALTER TABLE patients ADD COLUMN Password VARCHAR(128);
 ALTER TABLE doctors ADD COLUMN Password VARCHAR(128);
-
+ALTER TABLE medications add COLUMN Price DECIMAL(10,2);
