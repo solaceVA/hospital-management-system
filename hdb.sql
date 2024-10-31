@@ -32,11 +32,13 @@ CREATE TABLE Appointments (
     Appointment_ID INT PRIMARY KEY AUTO_INCREMENT,
     Patient_ID INT,
     Doctor_ID INT,
-    Appointment_DateTime DATETIME,
+    Appointment_Date DATE,
+    Appointment_Time TIME,
     Appointment_Status ENUM('Completed', 'Upcoming') NOT NULL DEFAULT 'Upcoming',
     FOREIGN KEY (Patient_ID) REFERENCES Patients(Patient_ID) ON DELETE CASCADE,
     FOREIGN KEY (Doctor_ID) REFERENCES Doctors(Doctor_ID) ON DELETE CASCADE
 );
+
 
 CREATE TABLE Medical_Record (
     Record_ID INT PRIMARY KEY AUTO_INCREMENT,
