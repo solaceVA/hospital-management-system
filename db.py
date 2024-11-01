@@ -165,11 +165,7 @@ def get_medicines():
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM medications')
     medicines = cursor.fetchall()
-    if not medicines:
-        print("No medicines found.")
-    else:
-        for i in medicines:
-            print(i)
+    return medicines
     conn.close()
 
 def add_medicine(data):
@@ -325,7 +321,7 @@ def register_patient(data):
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            hashed_password = bcrypt.hashpw(data['password'].encode(), bcrypt.gensalt()).decode('utf-8')
+            hashed_password = bcrypt.hashpw(data['password'].encode(), bcrypt.gensalt())
             sql = """
                 INSERT INTO patients (First_Name, Last_Name, Date_of_Birth, Gender, Phone_Number, Email, Address, Password)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
@@ -398,11 +394,31 @@ def get_all_doctors():
     try:
         with connection.cursor() as cursor:
             sql = """
-                SELECT Doctor_ID, First_Name, Last_Name, Phone_Number, Email, Dept_ID 
-                FROM Doctors;
+                SELECT
+                d.Doctor_ID,
+                CONCAT(d.First_Name, " ", d.Last_Name) AS Doctor_Name,
+                d.Phone_Number,
+                d.Email,
+                d.Dept_ID,
+                dept.Department_Name
+                FROM
+                    doctors AS d
+                INNER JOIN
+                    departments AS dept ON d.Dept_ID = dept.Dept_ID;
             """
             cursor.execute(sql)
             doctors = cursor.fetchall()
             return doctors
+    finally:
+        connection.close()
+
+def get_all_apts():
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = "SELECT * FROM appointments"
+            cursor.execute(sql)
+            apts = cursor.fetchall()
+            return apts
     finally:
         connection.close()
