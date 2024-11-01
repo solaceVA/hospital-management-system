@@ -4,7 +4,7 @@ from db import *
 
 def main():
     st.title("Hospital Management System")
-    tab1, tab2, tab3 = st.tabs(["Doctors", "Patients", "Appointments"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Doctors", "Patients", "Appointments", "Bills", "Medications"])
     with tab1:
         st.header("Doctors")
         option = st.selectbox("Select an option", ["Register Doctor", "Delete Doctor", "Doctors List"])
@@ -41,7 +41,7 @@ def main():
         elif option == "Doctors List":
             doctors = get_all_doctors() 
             if st.button("Get Doctors"):
-                df = pd.DataFrame(doctors, columns=["Doctor ID", "First Name", "Last Name", "Phone Number", "Email", "Dept ID"])
+                df = pd.DataFrame(doctors, columns=["Doctor ID", "Name", "Phone Number", "Email", "Dept ID", "Department Name"])
                 st.dataframe(df)
 
     with tab2:
@@ -146,4 +146,113 @@ def main():
                 df["Time"] = df["Time"].apply(lambda x: (x + pd.Timestamp('1970-01-01')).time() if isinstance(x, pd.Timedelta) else x.strftime("%H:%M"))
                 st.dataframe(df)
 
+    with tab4:
+        st.header("Bills")
+        option = st.selectbox("Select an option", ["Create Bill", "Update Bill Amount", "Update Bill Status", "Get Bill", "Get All Bills", "Get Total Amount"])
+        if option == "Create Bill":
+            create_patient_id = st.number_input("Patient ID", min_value=0, key="create_patient_id")
+            bill_date = st.date_input("Bill Date")
+            payment_status = st.selectbox("Payment Status", ["Unpaid","Partial", "Paid"])
+            amount = st.number_input("Amount", min_value=0.0, key="create_amount")
+            if st.button("Create Bill"):
+                data = {
+                    'patient_id': create_patient_id,
+                    'bill_date': bill_date,
+                    'payment_status': payment_status,
+                    'amount': amount
+                }
+                create_bill(data)
+                st.success("Bill created successfully.")
+                create_patient_id = 0
+                bill_date = None
+                payment_status = "Unpaid"
+                amount = 0.0
+        elif option == "Update Bill Amount":
+            update_bill_id = st.number_input("Bill ID", min_value=0, key="update_bill_id")
+            update_amount = st.number_input("New Amount", min_value=0.0, key="update_amount")
+            if st.button("Update Bill Amount"):
+                update_amount(update_bill_id, update_amount)
+                st.success("Bill amount updated successfully.")
+                update_bill_id = 0
+                update_amount = 0.0
+        elif option == "Update Bill Status":
+            update_status_bill_id = st.number_input("Bill ID", min_value=0, key="update_status_bill_id")
+            status = st.selectbox("New Payment Status", ["Paid", "Unpaid"])
+            if st.button("Update Bill Status"):
+                update_status(update_status_bill_id, status)
+                st.success("Bill status updated successfully.")
+                update_status_bill_id = 0
+                status = "Unpaid"
+        elif option == "Get Bill":
+            get_bill_id = st.number_input("Bill ID", min_value=0, key="get_bill_id")
+            if st.button("Get Bill"):
+                bill = get_bill(get_bill_id)
+                if bill:
+                    st.write(bill)
+        elif option == "Get All Bills":
+            if st.button("Get All Bills"):
+                bills = get_all_bills()
+                if bills:
+                    df = pd.DataFrame(bills, columns=["Bill ID", "Patient ID", "Bill Date", "Payment Status", "Amount"])
+                    st.dataframe(df)
+        elif option == "Get Total Amount":
+            total_patient_id = st.number_input("Patient_ID", min_value=0, key="total_patient_id")
+            if st.button("Get Total Amount"):
+                total = get_totals(total_patient_id)
+                st.write(f"Total amount: {total}")
+    
+    with tab5:
+        st.header("Medications")
+        meds = get_medicines()
+        if meds:
+            df = pd.DataFrame(meds, columns=["Medicine ID", "Name", "Dosage", "Frequency", "Price"])
+            st.dataframe(df)
+        st.subheader("Add a new medicine")
+        name = st.text_input("Medicine Name")
+        dosage = st.text_input("Dosage")
+        frequency = st.text_input("Frequency")
+        price = st.number_input("Price", min_value=0.0)
+        if st.button("Add Medicine"):
+            data = {
+                'name': name,
+                'dosage': dosage,
+                'frequency': frequency,
+                'price': price
+            }
+            add_medicine(data)
+            st.success("Medicine added successfully.")
+            name = ""
+            dosage = ""
+            frequency = ""
+            price = 0.0
+        st.subheader("Update medicine price")
+        med_id = st.number_input("Medicine ID", min_value=0)
+        new_price = st.number_input("New Price", min_value=0.0)
+        if st.button("Update Price"):
+            update_price(med_id, new_price)
+            st.success("Medicine price updated successfully.")
+            med_id = 0
+            new_price = 0.0
+        st.subheader("Delete a medicine")
+        med_id = st.number_input("MEDICINE ID", min_value=0)
+        if st.button("Delete Medicine"):
+            delete_medicine(med_id)
+            st.success("Medicine deleted successfully.")
+            med_id = 0
+        st.subheader("Update medicine dosage")
+        med_id = st.number_input("Medicine id", min_value=0)
+        new_dosage = st.text_input("New Dosage")
+        if st.button("Update Dosage"):
+            update_dosage(med_id, new_dosage)
+            st.success("Medicine dosage updated successfully.")
+            med_id = 0
+            new_dosage = ""
+        st.subheader("Update medicine frequency")
+        med_id = st.number_input("medicine ID", min_value=0)
+        new_frequency = st.text_input("New Frequency")
+        if st.button("Update Frequency"):
+            update_frequency(med_id, new_frequency)
+            st.success("Medicine frequency updated successfully.")
+            med_id = 0
+            new_frequency = ""
 main()
