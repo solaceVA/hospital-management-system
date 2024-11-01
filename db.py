@@ -422,3 +422,14 @@ def get_all_apts():
             return apts
     finally:
         connection.close()
+
+def get_all_records():
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = "CALL rec_pre();"
+            cursor.execute(sql)
+            records = cursor.fetchall()
+            return records
+    finally:
+        connection.close()
