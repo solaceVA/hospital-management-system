@@ -255,4 +255,105 @@ def main():
             st.success("Medicine frequency updated successfully.")
             med_id = 0
             new_frequency = ""
+    with tab6:
+        st.header("Prescriptions")
+        functionality = st.selectbox("Select a functionality", ["Create Prescription", "Get Prescription", "Update Quantity", "Update End Date"])
+        if functionality == "Create Prescription":
+            st.subheader("Create a new prescription")
+            record_id = st.number_input("Medical Record ID", min_value=0)
+            medicine_id = st.number_input("medicine id", min_value=0)
+            quantity = st.number_input("Quantity", min_value=0)
+            start_date = st.date_input("Start Date")
+            end_date = st.date_input("End Date")
+            if st.button("Create Prescription"):
+                data = {
+                    'record_id': record_id,
+                    'medicine_id': medicine_id,
+                    'quantity': quantity,
+                    'start_date': start_date,
+                    'end_date': end_date
+                }
+                create_prescription(data)
+                st.success("Prescription created successfully.")
+                record_id = 0
+                medicine_id = 0
+                quantity = 0
+                start_date = None
+                end_date = None
+
+        elif functionality == "Get Prescription":
+            st.subheader("Get a prescription")
+            record_id = st.number_input("Medical Record ID", min_value=0)
+            medicine_id = st.number_input("MEDICINE Id", min_value=0)
+            if st.button("Get Prescription"):
+                get_prescription(record_id, medicine_id)
+
+        elif functionality == "Update Quantity":
+            st.subheader("Update medicine quantity")
+            record_id = st.number_input("Medical Record Id", min_value=0)
+            medicine_id = st.number_input("Medicine Id", min_value=0)
+            quantity = st.number_input("New Quantity", min_value=0)
+            if st.button("Update Quantity"):
+                update_quantity(record_id, medicine_id, quantity)
+                st.success("Medicine quantity updated successfully.")
+                record_id = 0
+                medicine_id = 0
+                quantity = 0
+
+        elif functionality == "Update End Date":
+            st.subheader("Update end date")
+            record_id = st.number_input("Medical Record id", min_value=0)
+            medicine_id = st.number_input("MEDICINe id", min_value=0)
+            end_date = st.date_input("New End Date")
+            if st.button("Update End Date"):
+                update_end_date(record_id, medicine_id, end_date)
+                st.success("End date updated successfully.")
+                record_id = 0
+                medicine_id = 0
+                end_date = None
+    with tab7:
+        st.header("Medical Records")
+        records = get_all_records()
+        if records:
+            df = pd.DataFrame(records, columns=["Record ID", "Patient ID", "Doctor ID", "Record Date", "Diagnosis", "Treatment"])
+            st.dataframe(df)
+        else:
+            st.write("No medical records found.")
+        st.subheader("Create a new medical record")
+        patient_id = st.number_input("Patient_ID", min_value=0)
+        doctor_id = st.number_input("Doctor_ID", min_value=0)
+        date = st.date_input("Record Date")
+        diagnosis = st.text_area("Diagnosis")
+        treatment = st.text_area("Treatment")
+        if st.button("Create Record"):
+            data = {
+                'patient_id': patient_id,
+                'doctor_id': doctor_id,
+                'date': date,
+                'diagnosis': diagnosis,
+                'treatment': treatment
+            }
+            create_record(data)
+            st.success("Record created successfully.")
+            patient_id = 0
+            doctor_id = 0
+            date = None
+            diagnosis = ""
+            treatment = ""
+        st.subheader("Update diagnosis")
+        record_id = st.number_input("Record ID", min_value=0)
+        diagnosis = st.text_area("New Diagnosis")
+        if st.button("Update Diagnosis"):
+            update_diagnosis(record_id, diagnosis)
+            st.success("Diagnosis updated successfully.")
+            record_id = 0
+            diagnosis = ""
+        st.subheader("Update treatment")
+        record_id = st.number_input("Record_ID", min_value=0)
+        treatment = st.text_area("New Treatment")
+        if st.button("Update Treatment"):
+            update_treatment(record_id, treatment)
+            st.success("Treatment updated successfully.")
+            record_id = 0
+            treatment = ""
 main()
