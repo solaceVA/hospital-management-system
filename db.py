@@ -5,7 +5,7 @@ def get_connection():
     return pymysql.connect(
         host='localhost',
         user='root',
-        password='Phoenixwalnut@9094',
+        password='Ajwin2008',
         database='hdb'
     )
 
@@ -100,11 +100,7 @@ def get_all_bills():
             sql = "SELECT * FROM Bills"
             cursor.execute(sql)
             bills = cursor.fetchall()
-            if not bills: 
-                print("No bills found.")
-            else:
-                for bill in bills:
-                    print(bill)
+            return bills
     finally:
         connection.close()
 
@@ -144,18 +140,18 @@ def update_status(bill_id, status):
     finally:
         connection.close()
 
-def get_totals(patient_id):
-    conn = get_connection()
+def get_totals(total_patient_id):
+    conn=get_connection()
     try:
-        with conn.cursor as cursor:
+        with conn.cursor() as cursor:
             sql = """
                 SELECT SUM(Amount) AS Total
                 FROM bills
                 Where Patient_ID = %s
             """
-            cursor.execute(sql,(patient_id,))
+            cursor.execute(sql, (total_patient_id,))
             res = cursor.fetchone()
-            total = res['Total'] if res['Total'] is not None else 0
+            total = res[0] if res and res[0] is not None else 0.00
             return total
     finally:
         conn.close()
@@ -171,8 +167,8 @@ def get_medicines():
 def add_medicine(data):
     conn = get_connection()
     cursor = conn.cursor()
-    sql = "INSERT INTO medications (medicine_name, dosage, frequency, price) VALUES (%s, %s, %s, %s)"
-    cursor.execute(sql, (data['name'],data['dosage'],data['frequency'],data['price']))
+    sql = "INSERT INTO medications (medicine_name, dosage, price) VALUES (%s, %s, %s)"
+    cursor.execute(sql, (data['name'],data['dosage'],data['price']))
     conn.commit()
     conn.close()
 
@@ -200,20 +196,14 @@ def update_dosage(med_id, new_dosage):
     conn.commit()
     conn.close()
 
-def update_frequency(med_id, new_frequency):
-    conn = get_connection()
-    cursor = conn.cursor()
-    sql = "UPDATE medications SET frequency = %s WHERE medicine_id = %s"
-    cursor.execute(sql, (new_frequency, med_id))
-    conn.commit()
-    conn.close()
-
 def create_prescription(data):
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
             sql = "INSERT INTO prescriptions (Record_ID, Medicine_ID, Quantity, Start_Date, End_Date) VALUES (%s, %s, %s, %s, %s)"
-            cursor.execute(sql, (data['record_id'],data['medicine_id'],data['quantity'],data['start_date'],data['end_date']))
+            sql2= "INSERT INTO prescription_frequencies (prescription_ID, frequency) VALUES (%s, %s)"
+            cursor.execute(sql, (data['record_id'],data['medicine_id'],data['quantity'], data['start_date'],data['end_date']))
+            cursor.execute(sql2, (data['record_id'],data['frequency']))
             connection.commit()
             print("Prescription created successfully.")
     finally:
@@ -240,11 +230,8 @@ def get_prescription(record, medicine):
         with connection.cursor() as cursor:
             sql = "SELECT * FROM Prescriptions WHERE Record_ID = %s AND Medicine_ID = %s"
             cursor.execute(sql, (record, medicine))
-            prescription = cursor.fetchone()
-            if not prescription:
-                print("Prescription not found.")
-            else:
-                print(prescription)
+            prescription = cursor.fetchall()
+            return prescription
     finally:
         connection.close()
 
@@ -277,6 +264,14 @@ def update_end_date(record_id, medicine_id, end_date):
         print("End date updated successfully.")
     finally:
         connection.close()
+
+def update_frequency(record_id, new_frequency):
+    conn = get_connection()
+    cursor = conn.cursor()
+    sql = "UPDATE Prescriptions SET frequency = %s WHERE medicine_id = %s"
+    cursor.execute(sql, (new_frequency, record_id))
+    conn.commit()
+    conn.close()
 
 def create_record(data):
     connection = get_connection()
@@ -320,17 +315,33 @@ def update_treatment(record_id, treatment):
 def register_patient(data):
     connection = get_connection()
     try:
-        with connection.cursor() as cursor:
+       with connection.cursor() as cursor:
+            # Hash the password
             hashed_password = bcrypt.hashpw(data['password'].encode(), bcrypt.gensalt())
-            sql = """
-                INSERT INTO patients (First_Name, Last_Name, Date_of_Birth, Gender, Phone_Number, Email, Address, Password)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+
+            # Insert data into the Patients table
+            sql_patient = """
+                INSERT INTO patients (First_Name, Last_Name, Date_of_Birth, Gender, Email, Address, Password)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
-            cursor.execute(sql, (
+            cursor.execute(sql_patient, (
                 data['first_name'], data['last_name'], data['dob'], data['gender'],
-                data['phone_number'], data['email'], data['address'], hashed_password
+                data['email'], data['address'], hashed_password
             ))
+
+            # Get the last inserted Patient_ID
+            patient_id = cursor.lastrowid
+
+            # Insert data into the Patient_Phone_Numbers table
+            sql_phone = """
+                INSERT INTO patient_phone_numbers (Patient_ID, Phone_Number)
+                VALUES (%s, %s)
+            """
+            cursor.execute(sql_phone, (patient_id, data['phone_number']))
+
+            # Commit the transaction
             connection.commit()
+
             print("Patient registered successfully.")
     finally:
         connection.close()
@@ -380,8 +391,18 @@ def get_all_patients():
     try:
         with connection.cursor() as cursor:
             sql = """
-                SELECT Patient_ID, First_Name, Last_Name, Date_Of_Birth, Gender, Phone_Number, Email, Address
-                FROM Patients;
+                SELECT
+                p.Patient_ID,
+                CONCAT(p.First_Name, " ", p.Last_Name) AS Patient_Name,
+                p.Date_of_birth,
+                p.gender,
+                p.Email,
+                ph.Phone_Number,
+                p.address
+                FROM
+                    patients AS p
+                INNER JOIN
+                    patient_phone_numbers AS ph ON p.Patient_ID = ph.Patient_ID;
             """
             cursor.execute(sql)
             patients = cursor.fetchall()
@@ -416,7 +437,21 @@ def get_all_apts():
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "SELECT * FROM appointments"
+            sql =  """
+                SELECT
+                a.appointment_id,
+                CONCAT(p.First_Name, " ", p.Last_Name) AS Patient_Name,
+                CONCAT(d.First_Name, " ", d.Last_Name) AS Doctor_Name,
+                a.appointment_time,
+                a.appointment_date,
+                a.appointment_status
+                FROM
+                    appointments AS a
+                INNER JOIN
+                    doctors AS d ON d.Doctor_ID = a.Doctor_ID
+                INNER JOIN
+                    patients AS p ON p.Patient_ID = a.Patient_ID;
+            """
             cursor.execute(sql)
             apts = cursor.fetchall()
             return apts
@@ -427,7 +462,7 @@ def get_all_records():
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "CALL rec_pre();"
+            sql = "CALL rec_pre2();"
             cursor.execute(sql)
             records = cursor.fetchall()
             return records

@@ -4,7 +4,7 @@ from db import *
 
 def main():
     st.title("Hospital Management System")
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Doctors", "Patients", "Appointments", "Bills", "Medications"])
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["Doctors", "Patients", "Appointments", "Bills", "Medications", "Prescriptions", "Medical_Records"])
     with tab1:
         st.header("Doctors")
         option = st.selectbox("Select an option", ["Register Doctor", "Delete Doctor", "Doctors List"])
@@ -85,15 +85,15 @@ def main():
         elif option == "Patients List":
             patients = get_all_patients()
             if st.button("Get Patients"):
-                df = pd.DataFrame(patients, columns=["Patient ID", "First Name", "Last Name","Date_Of_Birth", "Gender", "Phone Number", "Email", "Address"])
+                df = pd.DataFrame(patients, columns=["Patient ID", "Name","Date_Of_Birth", "Gender", "Email","Phone No.", "Address"])
                 st.dataframe(df)
 
     with tab3:
         st.header("Appointments")
         option = st.selectbox("Select an option", ["Create Appointment", "Update Appointment Date", "Update Appointment Time", "Update Appointment Status", "Delete Appointment", "Appointments List"])
         if option == "Create Appointment":
-            patient_id = st.number_input("Patient ID", min_value=0)
-            doctor_id = st.number_input("Doctor ID", min_value=0)
+            patient_id = st.number_input("PatientID", min_value=0)
+            doctor_id = st.number_input("DoctorID", min_value=0)
             date = st.date_input("Appointment Date")
             time = st.time_input("Appointment Time" )
             if st.button("Create Appointment"):
@@ -142,13 +142,13 @@ def main():
         elif option == "Appointments List":
             appointments = get_all_apts()
             if st.button("Get Appointments"):
-                df = pd.DataFrame(appointments, columns=["Appointment ID", "Patient ID", "Doctor ID", "Date", "Time", "Status"])
+                df = pd.DataFrame(appointments, columns=["Appointment ID", "Patient Name", "Doctor Name", "Date", "Time", "Status"])
                 df["Time"] = df["Time"].apply(lambda x: (x + pd.Timestamp('1970-01-01')).time() if isinstance(x, pd.Timedelta) else x.strftime("%H:%M"))
                 st.dataframe(df)
 
     with tab4:
         st.header("Bills")
-        option = st.selectbox("Select an option", ["Create Bill", "Update Bill Amount", "Update Bill Status", "Get Bill", "Get All Bills", "Get Total Amount"])
+        option = st.selectbox("Select an option", ["Create Bill", "Update Bill Amount", "Update Bill Status", "Get All Bills", "Get Total Amount"])
         if option == "Create Bill":
             create_patient_id = st.number_input("Patient ID", min_value=0, key="create_patient_id")
             bill_date = st.date_input("Bill Date")
@@ -169,12 +169,14 @@ def main():
                 amount = 0.0
         elif option == "Update Bill Amount":
             update_bill_id = st.number_input("Bill ID", min_value=0, key="update_bill_id")
-            update_amount = st.number_input("New Amount", min_value=0.0, key="update_amount")
+            new_amount = st.number_input("New Amount", min_value=0.0, key="update_amount")
             if st.button("Update Bill Amount"):
-                update_amount(update_bill_id, update_amount)
+                # Call the function (assuming update_amount is the function name)
+                update_amount(update_bill_id, new_amount)
                 st.success("Bill amount updated successfully.")
                 update_bill_id = 0
-                update_amount = 0.0
+                new_amount = 0.0
+
         elif option == "Update Bill Status":
             update_status_bill_id = st.number_input("Bill ID", min_value=0, key="update_status_bill_id")
             status = st.selectbox("New Payment Status", ["Paid", "Unpaid"])
@@ -183,12 +185,6 @@ def main():
                 st.success("Bill status updated successfully.")
                 update_status_bill_id = 0
                 status = "Unpaid"
-        elif option == "Get Bill":
-            get_bill_id = st.number_input("Bill ID", min_value=0, key="get_bill_id")
-            if st.button("Get Bill"):
-                bill = get_bill(get_bill_id)
-                if bill:
-                    st.write(bill)
         elif option == "Get All Bills":
             if st.button("Get All Bills"):
                 bills = get_all_bills()
@@ -199,24 +195,22 @@ def main():
             total_patient_id = st.number_input("Patient_ID", min_value=0, key="total_patient_id")
             if st.button("Get Total Amount"):
                 total = get_totals(total_patient_id)
-                st.write(f"Total amount: {total}")
+                st.write("Total amount:"f"{total}")
     
     with tab5:
         st.header("Medications")
         meds = get_medicines()
         if meds:
-            df = pd.DataFrame(meds, columns=["Medicine ID", "Name", "Dosage", "Frequency", "Price"])
+            df = pd.DataFrame(meds, columns=["Medicine ID", "Name", "Dosage", "Price"])
             st.dataframe(df)
         st.subheader("Add a new medicine")
         name = st.text_input("Medicine Name")
         dosage = st.text_input("Dosage")
-        frequency = st.text_input("Frequency")
         price = st.number_input("Price", min_value=0.0)
         if st.button("Add Medicine"):
             data = {
                 'name': name,
                 'dosage': dosage,
-                'frequency': frequency,
                 'price': price
             }
             add_medicine(data)
@@ -247,14 +241,6 @@ def main():
             st.success("Medicine dosage updated successfully.")
             med_id = 0
             new_dosage = ""
-        st.subheader("Update medicine frequency")
-        med_id = st.number_input("medicine ID", min_value=0)
-        new_frequency = st.text_input("New Frequency")
-        if st.button("Update Frequency"):
-            update_frequency(med_id, new_frequency)
-            st.success("Medicine frequency updated successfully.")
-            med_id = 0
-            new_frequency = ""
     with tab6:
         st.header("Prescriptions")
         functionality = st.selectbox("Select a functionality", ["Create Prescription", "Get Prescription", "Update Quantity", "Update End Date"])
@@ -263,30 +249,39 @@ def main():
             record_id = st.number_input("Medical Record ID", min_value=0)
             medicine_id = st.number_input("medicine id", min_value=0)
             quantity = st.number_input("Quantity", min_value=0)
+            frequency = st.text_input("Frequency")
             start_date = st.date_input("Start Date")
             end_date = st.date_input("End Date")
+            prescription_ID = st.number_input("Prescription ID", min_value=0)
             if st.button("Create Prescription"):
                 data = {
                     'record_id': record_id,
                     'medicine_id': medicine_id,
                     'quantity': quantity,
+                    'frequency': frequency,
                     'start_date': start_date,
-                    'end_date': end_date
+                    'end_date': end_date,
+                    'prescription_ID': prescription_ID
                 }
                 create_prescription(data)
                 st.success("Prescription created successfully.")
                 record_id = 0
                 medicine_id = 0
                 quantity = 0
+                frequency = None
                 start_date = None
                 end_date = None
+                prescription_ID = 0
 
         elif functionality == "Get Prescription":
             st.subheader("Get a prescription")
             record_id = st.number_input("Medical Record ID", min_value=0)
             medicine_id = st.number_input("MEDICINE Id", min_value=0)
             if st.button("Get Prescription"):
-                get_prescription(record_id, medicine_id)
+               p = get_prescription(record_id, medicine_id)
+               if p:
+                df = pd.DataFrame(p, columns=["Prescription ID", "Record ID","Medicine ID", "Quantity","Start Date", "End date"])
+                st.dataframe(df)
 
         elif functionality == "Update Quantity":
             st.subheader("Update medicine quantity")
@@ -315,7 +310,7 @@ def main():
         st.header("Medical Records")
         records = get_all_records()
         if records:
-            df = pd.DataFrame(records, columns=["Record ID", "Patient ID", "Doctor ID", "Record Date", "Diagnosis", "Treatment"])
+            df = pd.DataFrame(records, columns=["Record ID", "Patient ID", "Patient Name", "Doctor ID", "Doctor", "Medicine ID", "Medicine name"])
             st.dataframe(df)
         else:
             st.write("No medical records found.")
