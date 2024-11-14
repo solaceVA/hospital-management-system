@@ -1,10 +1,12 @@
 DELIMITER //
-        CREATE PROCEDURE rec_pre()
+        CREATE PROCEDURE rec_pre2()
         BEGIN
             SELECT 
                 nr.Record_ID,
-                concat(nr.pfn, " " , nr.pln) as Patient_Name,
-                concat(nr.dfn, " " , nr.dln) as Doctor_Name,
+                nr.Patient_ID,
+                CONCAT(IFNULL(nr.pfn, ''), ' ', IFNULL(nr.pln, '')) AS Patient_Name,
+                nr.Doctor_ID,
+                CONCAT(IFNULL(nr.dfn, ''), ' ', IFNULL(nr.dln, '')) AS Doctor_Name,
                 pnr.Medicine_ID,
                 pnr.Medicine_Name
             FROM 
@@ -13,8 +15,10 @@ DELIMITER //
                         mr.Record_ID,
                         p.First_Name as pfn,
                         p.Last_Name as pln,
+                        p.Patient_ID,
                         d.First_Name as dfn,
-                        d.Last_Name as dln
+                        d.Last_Name as dln,
+                        d.Doctor_ID
                     FROM 
                         medical_record as mr
                     INNER JOIN 
