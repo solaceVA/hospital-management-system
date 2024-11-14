@@ -1,15 +1,16 @@
 CREATE DATABASE hdb;
 USE hdb;
 
+-- Core tables
 CREATE TABLE Patients (
     Patient_ID INT PRIMARY KEY AUTO_INCREMENT,
     First_Name VARCHAR(20),
     Last_Name VARCHAR(20),
     Date_of_Birth DATE,
     Gender VARCHAR(6),
-    Phone_Number VARCHAR(100),
     Email VARCHAR(100),
-    Address TEXT
+    Address TEXT,
+    Password VARCHAR(128)
 );
 
 CREATE TABLE Departments (
@@ -25,6 +26,7 @@ CREATE TABLE Doctors (
     Last_Name VARCHAR(100),
     Phone_Number VARCHAR(100),
     Email VARCHAR(100),
+    Password VARCHAR(128),
     FOREIGN KEY (Dept_ID) REFERENCES Departments(Dept_ID) ON DELETE CASCADE
 );
 
@@ -38,7 +40,6 @@ CREATE TABLE Appointments (
     FOREIGN KEY (Patient_ID) REFERENCES Patients(Patient_ID) ON DELETE CASCADE,
     FOREIGN KEY (Doctor_ID) REFERENCES Doctors(Doctor_ID) ON DELETE CASCADE
 );
-
 
 CREATE TABLE Medical_Record (
     Record_ID INT PRIMARY KEY AUTO_INCREMENT,
@@ -55,7 +56,7 @@ CREATE TABLE Medications (
     Medicine_ID INT PRIMARY KEY AUTO_INCREMENT,
     Medicine_Name VARCHAR(100),
     Dosage VARCHAR(50),
-    Frequency VARCHAR(50)
+    Price DECIMAL(10, 2)
 );
 
 CREATE TABLE Prescriptions (
@@ -78,6 +79,17 @@ CREATE TABLE Bills (
     FOREIGN KEY (Patient_ID) REFERENCES Patients(Patient_ID) ON DELETE CASCADE
 );
 
-ALTER TABLE patients ADD COLUMN Password VARCHAR(128);
-ALTER TABLE doctors ADD COLUMN Password VARCHAR(128);
-ALTER TABLE medications add COLUMN Price DECIMAL(10,2);
+-- Multi-valued attribute tables
+CREATE TABLE Patient_Phone_Numbers (
+    Patient_ID INT,
+    Phone_Number VARCHAR(100),
+    PRIMARY KEY (Patient_ID, Phone_Number),
+    FOREIGN KEY (Patient_ID) REFERENCES Patients(Patient_ID) ON DELETE CASCADE
+);
+
+CREATE TABLE Prescription_Frequencies (
+    Prescription_ID INT,
+    Frequency VARCHAR(50),
+    PRIMARY KEY (Prescription_ID, Frequency),
+    FOREIGN KEY (Prescription_ID) REFERENCES Prescriptions(Prescription_ID) ON DELETE CASCADE
+);
