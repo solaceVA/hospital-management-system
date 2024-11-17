@@ -3,112 +3,40 @@ import pandas as pd
 import bcrypt
 from db import *
 
-def hash_password(password):
-    """Hash a password using bcrypt"""
-    salt = bcrypt.gensalt()
-    return bcrypt.hashpw(password.encode('utf-8'), salt)
-
-def verify_password(password, hashed):
-    """Verify a password against a hash using bcryt"""
-    return bcrypt.checkpw(password.encode('utf-8'), hashed)
-
-def verify_user(username, password, connection):
-    """Verify user credentials against the database"""
-    # First check if this is the admin login
-    if username == "Admin" and password == "Admin":
-        return "admin", 0  # Return admin role with a dummy user_id
-
-    try:
-        cursor = connection.cursor()
-        # Get the stored hash for the username
-        query = "SELECT password, role, user_id FROM Users WHERE username = %s"
-        cursor.execute(query, (username,))
-        result = cursor.fetchone()
-
-        if result and verify_password(password, result[0]):
-            return result[1], result[2]  # Return role and user_id
-        return None
-    except Exception as e:
-        st.error(f"Database error: {str(e)}")
-        return None
-
-
-def register_user(username, password, role, connection):
-    """Register a new user with bcrypt hashed password"""
-    try:
-        cursor = connection.cursor()
-        hashed_password = hash_password(password)
-        query = "INSERT INTO Users (username, password, role) VALUES (%s, %s, %s)"
-        cursor.execute(query, (username, hashed_password, role))
-        connection.commit()
-        return True
-    except Exception as e:
-        st.error(f"Registration error: {str(e)}")
-        return False
-
 def main():
     st.title("Hospital Management System")
-    
-    # Initialize session state variables
     if 'logged_in' not in st.session_state:
         st.session_state['logged_in'] = False
         st.session_state['role'] = None
         st.session_state['user_id'] = None
 
-    # Login/Register Selection
     if not st.session_state['logged_in']:
-        auth_option = st.radio("Choose an option:", ["Login", "Register"])
-        
-        if auth_option == "Login":
-            with st.form("login_form"):
-                username = st.text_input("Username")
-                password = st.text_input("Password", type="password")
-                submitted = st.form_submit_button("Login")
-                
-                if submitted:
-                    connection = get_connection()
-                    user_info = verify_user(username, password, connection)
-                    
-                    if user_info:
-                        role, user_id = user_info
-                        st.session_state['logged_in'] = True
-                        st.session_state['role'] = role
-                        st.session_state['user_id'] = user_id
-                        st.success(f"Successfully logged in as {role}")
-                        st.rerun()
-                    else:
-                        st.error("Invalid credentials")
-        
-        else:  # Register
-            with st.form("register_form"):
-                new_username = st.text_input("Choose Username")
-                new_password = st.text_input("Choose Password", type="password")
-                confirm_password = st.text_input("Confirm Password", type="password")
-                role = st.selectbox("Role", ["Patient", "Doctor"])
-                submitted = st.form_submit_button("Register")
-                
-                if submitted:
-                    if new_password != confirm_password:
-                        st.error("Passwords do not match!")
-                    elif len(new_password) < 8:
-                        st.error("Password must be at least 8 characters long!")
-                    else:
-                        connection = get_connection()
-                        if register_user(new_username, new_password, role, connection):
-                            st.success("Registration successful! Please login.")
-                        else:
-                            st.error("Registration failed!")
-    
-    # Main Application Interface after login
+       
+        with st.form("login_form"):
+            email = st.text_input("Email")
+            password = st.text_input("Password", type="password")
+            submitted = st.form_submit_button("Login")
+
+            if submitted:
+                user_info = verify_user(email, password)
+
+                if user_info:
+                    role, user_id = user_info
+                    st.session_state['logged_in'] = True
+                    st.session_state['role'] = role
+                    st.session_state['user_id'] = user_id
+                    st.success(f"Successfully logged in as {role}")
+                    st.rerun()
+                else:
+                    st.error("Invalid credentials")
+
     if st.session_state['logged_in']:
-        # Add logout button in sidebar
         if st.sidebar.button("Logout"):
             st.session_state['logged_in'] = False
             st.session_state['role'] = None
             st.session_state['user_id'] = None
             st.rerun()
 
-        # Role-based access control
         if st.session_state['role'] == 'admin':
             show_admin_interface()
         elif st.session_state['role'] == 'doctor':
@@ -118,10 +46,10 @@ def main():
 
 def show_admin_interface():
     tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-        "Doctors", "Patients", "Appointments", "Bills", 
-        "Medications", "Prescriptions", "Medical_Records"
+        "Doctors", "Patients", "Appointments", "Bills",
+        "Medications", "Prescriptions", "Medical Records"
     ])
-    
+
     with tab1:
         st.header("Doctors")
         option = st.selectbox("Select an option", ["Register Doctor", "Delete Doctor", "Doctors List"])
@@ -156,9 +84,9 @@ def show_admin_interface():
                 st.success("Doctor deleted successfully.")
                 doctor_id = 0
         elif option == "Doctors List":
-            doctors = get_all_doctors() 
+            doctors = get_all_doctors()
             if st.button("Get Doctors"):
-                df = pd.DataFrame(doctors, columns=["Doctor ID", "Name", "Phone Number", "Email", "Dept ID", "Department Name"])
+                df = pd.DataFrame(doctors)
                 st.dataframe(df)
 
     with tab2:
@@ -202,7 +130,7 @@ def show_admin_interface():
         elif option == "Patients List":
             patients = get_all_patients()
             if st.button("Get Patients"):
-                df = pd.DataFrame(patients, columns=["Patient ID", "Name","Date_Of_Birth", "Gender", "Email","Phone No.", "Address"])
+                df = pd.DataFrame(patients)
                 st.dataframe(df)
 
     with tab3:
@@ -259,8 +187,7 @@ def show_admin_interface():
         elif option == "Appointments List":
             appointments = get_all_apts()
             if st.button("Get Appointments"):
-                df = pd.DataFrame(appointments, columns=["Appointment ID", "Patient Name", "Doctor Name", "Date", "Time", "Status"])
-                df["Time"] = df["Time"].apply(lambda x: (x + pd.Timestamp('1970-01-01')).time() if isinstance(x, pd.Timedelta) else x.strftime("%H:%M"))
+                df = pd.DataFrame(appointments)
                 st.dataframe(df)
 
     with tab4:
@@ -288,12 +215,10 @@ def show_admin_interface():
             update_bill_id = st.number_input("Bill ID", min_value=0, key="update_bill_id")
             new_amount = st.number_input("New Amount", min_value=0.0, key="update_amount")
             if st.button("Update Bill Amount"):
-                # Call the function (assuming update_amount is the function name)
                 update_amount(update_bill_id, new_amount)
                 st.success("Bill amount updated successfully.")
                 update_bill_id = 0
                 new_amount = 0.0
-
         elif option == "Update Bill Status":
             update_status_bill_id = st.number_input("Bill ID", min_value=0, key="update_status_bill_id")
             status = st.selectbox("New Payment Status", ["Paid", "Unpaid"])
@@ -306,19 +231,19 @@ def show_admin_interface():
             if st.button("Get All Bills"):
                 bills = get_all_bills()
                 if bills:
-                    df = pd.DataFrame(bills, columns=["Bill ID", "Patient ID", "Bill Date", "Payment Status", "Amount"])
+                    df = pd.DataFrame(bills)
                     st.dataframe(df)
         elif option == "Get Total Amount":
             total_patient_id = st.number_input("Patient_ID", min_value=0, key="total_patient_id")
             if st.button("Get Total Amount"):
                 total = get_totals(total_patient_id)
                 st.write("Total amount:"f"{total}")
-    
+
     with tab5:
         st.header("Medications")
         meds = get_medicines()
         if meds:
-            df = pd.DataFrame(meds, columns=["Medicine ID", "Name", "Dosage", "Price"])
+            df = pd.DataFrame(meds)
             st.dataframe(df)
         st.subheader("Add a new medicine")
         name = st.text_input("Medicine Name")
@@ -334,7 +259,6 @@ def show_admin_interface():
             st.success("Medicine added successfully.")
             name = ""
             dosage = ""
-            frequency = ""
             price = 0.0
         st.subheader("Update medicine price")
         med_id = st.number_input("Medicine ID", min_value=0)
@@ -358,6 +282,7 @@ def show_admin_interface():
             st.success("Medicine dosage updated successfully.")
             med_id = 0
             new_dosage = ""
+
     with tab6:
         st.header("Prescriptions")
         functionality = st.selectbox("Select a functionality", ["Create Prescription", "Get Prescription", "Update Quantity", "Update End Date"])
@@ -389,7 +314,6 @@ def show_admin_interface():
                 start_date = None
                 end_date = None
                 prescription_ID = 0
-
         elif functionality == "Get Prescription":
             st.subheader("Get a prescription")
             record_id = st.number_input("Medical Record ID", min_value=0)
@@ -397,9 +321,8 @@ def show_admin_interface():
             if st.button("Get Prescription"):
                p = get_prescription(record_id, medicine_id)
                if p:
-                df = pd.DataFrame(p, columns=["Prescription ID", "Record ID","Medicine ID", "Quantity","Start Date", "End date"])
+                df = pd.DataFrame(p)
                 st.dataframe(df)
-
         elif functionality == "Update Quantity":
             st.subheader("Update medicine quantity")
             record_id = st.number_input("Medical Record Id", min_value=0)
@@ -411,7 +334,6 @@ def show_admin_interface():
                 record_id = 0
                 medicine_id = 0
                 quantity = 0
-
         elif functionality == "Update End Date":
             st.subheader("Update end date")
             record_id = st.number_input("Medical Record id", min_value=0)
@@ -423,11 +345,12 @@ def show_admin_interface():
                 record_id = 0
                 medicine_id = 0
                 end_date = None
+
     with tab7:
         st.header("Medical Records")
         records = get_all_records()
         if records:
-            df = pd.DataFrame(records, columns=["Record ID", "Patient ID", "Patient Name", "Doctor ID", "Doctor", "Medicine ID", "Medicine name"])
+            df = pd.DataFrame(records)
             st.dataframe(df)
         else:
             st.write("No medical records found.")
@@ -471,14 +394,14 @@ def show_admin_interface():
 
 def show_doctor_interface(doctor_id):
     tab1, tab2, tab3 = st.tabs(["My Appointments", "Patient Records", "Prescriptions"])
-    
+
     with tab1:
         st.header("My Appointments")
         appointments = get_doctor_appointments(doctor_id)
         if appointments:
             df = pd.DataFrame(appointments)
             st.dataframe(df)
-    
+
     with tab2:
         st.header("Patient Records")
         patient_id = st.number_input("Enter Patient ID", min_value=1)
@@ -487,21 +410,49 @@ def show_doctor_interface(doctor_id):
             if records:
                 df = pd.DataFrame(records)
                 st.dataframe(df)
-    
+
     with tab3:
-        st.header("Create Prescription")
-        create_prescription_form(doctor_id)
+        st.header("Prescriptions")
+        functionality = st.selectbox("Select a functionality", ["Create Prescription", "Get Prescription", "Update Quantity", "Update End Date"])
+        if functionality == "Create Prescription":
+            st.subheader("Create a new prescription")
+            record_id = st.number_input("Medical Record ID", min_value=0)
+            medicine_id = st.number_input("medicine id", min_value=0)
+            quantity = st.number_input("Quantity", min_value=0)
+            frequency = st.text_input("Frequency")
+            start_date = st.date_input("Start Date")
+            end_date = st.date_input("End Date")
+            prescription_ID = st.number_input("Prescription ID", min_value=0)
+            if st.button("Create Prescription"):
+                data = {
+                    'record_id': record_id,
+                    'medicine_id': medicine_id,
+                    'quantity': quantity,
+                    'frequency': frequency,
+                    'start_date': start_date,
+                    'end_date': end_date,
+                    'prescription_ID': prescription_ID
+                }
+                create_prescription(data)
+                st.success("Prescription created successfully.")
+                record_id = 0
+                medicine_id = 0
+                quantity = 0
+                frequency = None
+                start_date = None
+                end_date = None
+                prescription_ID = 0
 
 def show_patient_interface(patient_id):
     tab1, tab2, tab3 = st.tabs(["My Appointments", "Medical Records", "Bills"])
-    
+
     with tab1:
         st.header("My Appointments")
         appointments = get_patient_appointments(patient_id)
         if appointments:
             df = pd.DataFrame(appointments)
             st.dataframe(df)
-        
+
         st.subheader("Book New Appointment")
         with st.form("book_appointment"):
             doctor_id = st.number_input("Doctor ID", min_value=1)
@@ -515,44 +466,22 @@ def show_patient_interface(patient_id):
                     'time': time
                 })
                 st.success("Appointment booked successfully!")
-    
+
     with tab2:
         st.header("My Medical Records")
         records = get_medical_records(patient_id)
         if records:
             df = pd.DataFrame(records)
             st.dataframe(df)
-    
+
     with tab3:
         st.header("My Bills")
-        bills = get_totals(patient_id)
+        bills = get_bills(patient_id)
         if bills:
             df = pd.DataFrame(bills)
             st.dataframe(df)
-        
+
         total = get_totals(patient_id)
         st.info(f"Total outstanding amount: ${total}")
 
-def create_prescription_form(doctor_id):
-    with st.form("prescription_form"):
-        patient_id = st.number_input("Patient ID", min_value=1)
-        medicine_id = st.number_input("Medicine ID", min_value=1)
-        quantity = st.number_input("Quantity", min_value=1)
-        frequency = st.text_input("Frequency (e.g., '2 times daily')")
-        start_date = st.date_input("Start Date")
-        end_date = st.date_input("End Date")
-        
-        if st.form_submit_button("Create Prescription"):
-            data = {
-                'doctor_id': doctor_id,
-                'patient_id': patient_id,
-                'medicine_id': medicine_id,
-                'quantity': quantity,
-                'frequency': frequency,
-                'start_date': start_date,
-                'end_date': end_date
-            }
-            create_prescription(data)
-            st.success("Prescription created successfully!")
-
-main()        
+main()
