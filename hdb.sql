@@ -1,6 +1,14 @@
 CREATE DATABASE hdb;
 USE hdb;
 
+CREATE TABLE Users (
+    user_id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password BINARY(60) NOT NULL,  -- For bcrypt hashed passwords
+    role VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Core tables
 CREATE TABLE Patients (
     Patient_ID INT PRIMARY KEY AUTO_INCREMENT,
