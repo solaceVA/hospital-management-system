@@ -1,10 +1,127 @@
 import streamlit as st
 import pandas as pd
+import bcrypt
 from db import *
+
+def hash_password(password):
+    """Hash a password using bcrypt"""
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt)
+
+def verify_password(password, hashed):
+    """Verify a password against a hash using bcryt"""
+    return bcrypt.checkpw(password.encode('utf-8'), hashed)
+
+def verify_user(username, password, connection):
+    """Verify user credentials against the database"""
+    # First check if this is the admin login
+    if username == "Admin" and password == "Admin":
+        return "admin", 0  # Return admin role with a dummy user_id
+
+    try:
+        cursor = connection.cursor()
+        # Get the stored hash for the username
+        query = "SELECT password, role, user_id FROM Users WHERE username = %s"
+        cursor.execute(query, (username,))
+        result = cursor.fetchone()
+
+        if result and verify_password(password, result[0]):
+            return result[1], result[2]  # Return role and user_id
+        return None
+    except Exception as e:
+        st.error(f"Database error: {str(e)}")
+        return None
+
+
+def register_user(username, password, role, connection):
+    """Register a new user with bcrypt hashed password"""
+    try:
+        cursor = connection.cursor()
+        hashed_password = hash_password(password)
+        query = "INSERT INTO Users (username, password, role) VALUES (%s, %s, %s)"
+        cursor.execute(query, (username, hashed_password, role))
+        connection.commit()
+        return True
+    except Exception as e:
+        st.error(f"Registration error: {str(e)}")
+        return False
 
 def main():
     st.title("Hospital Management System")
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["Doctors", "Patients", "Appointments", "Bills", "Medications", "Prescriptions", "Medical_Records"])
+    
+    # Initialize session state variables
+    if 'logged_in' not in st.session_state:
+        st.session_state['logged_in'] = False
+        st.session_state['role'] = None
+        st.session_state['user_id'] = None
+
+    # Login/Register Selection
+    if not st.session_state['logged_in']:
+        auth_option = st.radio("Choose an option:", ["Login", "Register"])
+        
+        if auth_option == "Login":
+            with st.form("login_form"):
+                username = st.text_input("Username")
+                password = st.text_input("Password", type="password")
+                submitted = st.form_submit_button("Login")
+                
+                if submitted:
+                    connection = get_connection()
+                    user_info = verify_user(username, password, connection)
+                    
+                    if user_info:
+                        role, user_id = user_info
+                        st.session_state['logged_in'] = True
+                        st.session_state['role'] = role
+                        st.session_state['user_id'] = user_id
+                        st.success(f"Successfully logged in as {role}")
+                        st.rerun()
+                    else:
+                        st.error("Invalid credentials")
+        
+        else:  # Register
+            with st.form("register_form"):
+                new_username = st.text_input("Choose Username")
+                new_password = st.text_input("Choose Password", type="password")
+                confirm_password = st.text_input("Confirm Password", type="password")
+                role = st.selectbox("Role", ["Patient", "Doctor"])
+                submitted = st.form_submit_button("Register")
+                
+                if submitted:
+                    if new_password != confirm_password:
+                        st.error("Passwords do not match!")
+                    elif len(new_password) < 8:
+                        st.error("Password must be at least 8 characters long!")
+                    else:
+                        connection = get_connection()
+                        if register_user(new_username, new_password, role, connection):
+                            st.success("Registration successful! Please login.")
+                        else:
+                            st.error("Registration failed!")
+    
+    # Main Application Interface after login
+    if st.session_state['logged_in']:
+        # Add logout button in sidebar
+        if st.sidebar.button("Logout"):
+            st.session_state['logged_in'] = False
+            st.session_state['role'] = None
+            st.session_state['user_id'] = None
+            st.rerun()
+
+        # Role-based access control
+        if st.session_state['role'] == 'admin':
+            show_admin_interface()
+        elif st.session_state['role'] == 'doctor':
+            show_doctor_interface(st.session_state['user_id'])
+        elif st.session_state['role'] == 'patient':
+            show_patient_interface(st.session_state['user_id'])
+
+def show_admin_interface():
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "Doctors", "Patients", "Appointments", "Bills", 
+        "Medications", "Prescriptions", "Medical_Records"
+    ])
+    
     with tab1:
         st.header("Doctors")
         option = st.selectbox("Select an option", ["Register Doctor", "Delete Doctor", "Doctors List"])
@@ -351,4 +468,91 @@ def main():
             st.success("Treatment updated successfully.")
             record_id = 0
             treatment = ""
-main()
+
+def show_doctor_interface(doctor_id):
+    tab1, tab2, tab3 = st.tabs(["My Appointments", "Patient Records", "Prescriptions"])
+    
+    with tab1:
+        st.header("My Appointments")
+        appointments = get_doctor_appointments(doctor_id)
+        if appointments:
+            df = pd.DataFrame(appointments)
+            st.dataframe(df)
+    
+    with tab2:
+        st.header("Patient Records")
+        patient_id = st.number_input("Enter Patient ID", min_value=1)
+        if st.button("View Records"):
+            records = get_patient_records_for_doctor(doctor_id, patient_id)
+            if records:
+                df = pd.DataFrame(records)
+                st.dataframe(df)
+    
+    with tab3:
+        st.header("Create Prescription")
+        create_prescription_form(doctor_id)
+
+def show_patient_interface(patient_id):
+    tab1, tab2, tab3 = st.tabs(["My Appointments", "Medical Records", "Bills"])
+    
+    with tab1:
+        st.header("My Appointments")
+        appointments = get_patient_appointments(patient_id)
+        if appointments:
+            df = pd.DataFrame(appointments)
+            st.dataframe(df)
+        
+        st.subheader("Book New Appointment")
+        with st.form("book_appointment"):
+            doctor_id = st.number_input("Doctor ID", min_value=1)
+            date = st.date_input("Appointment Date")
+            time = st.time_input("Appointment Time")
+            if st.form_submit_button("Book Appointment"):
+                create_apt({
+                    'patient_id': patient_id,
+                    'doctor_id': doctor_id,
+                    'date': date,
+                    'time': time
+                })
+                st.success("Appointment booked successfully!")
+    
+    with tab2:
+        st.header("My Medical Records")
+        records = get_medical_records(patient_id)
+        if records:
+            df = pd.DataFrame(records)
+            st.dataframe(df)
+    
+    with tab3:
+        st.header("My Bills")
+        bills = get_totals(patient_id)
+        if bills:
+            df = pd.DataFrame(bills)
+            st.dataframe(df)
+        
+        total = get_totals(patient_id)
+        st.info(f"Total outstanding amount: ${total}")
+
+def create_prescription_form(doctor_id):
+    with st.form("prescription_form"):
+        patient_id = st.number_input("Patient ID", min_value=1)
+        medicine_id = st.number_input("Medicine ID", min_value=1)
+        quantity = st.number_input("Quantity", min_value=1)
+        frequency = st.text_input("Frequency (e.g., '2 times daily')")
+        start_date = st.date_input("Start Date")
+        end_date = st.date_input("End Date")
+        
+        if st.form_submit_button("Create Prescription"):
+            data = {
+                'doctor_id': doctor_id,
+                'patient_id': patient_id,
+                'medicine_id': medicine_id,
+                'quantity': quantity,
+                'frequency': frequency,
+                'start_date': start_date,
+                'end_date': end_date
+            }
+            create_prescription(data)
+            st.success("Prescription created successfully!")
+
+main()        
