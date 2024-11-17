@@ -6,8 +6,67 @@ def get_connection():
         host='localhost',
         user='root',
         password='Ajwin2008',
-        database='hdb'
+        database='hdb',
+        cursorclass=pymysql.cursors.DictCursor
     )
+
+# New user authentication functions
+def hash_password(password):
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt())
+
+def verify_password(password, hashed_password):
+    print(password.encode())
+    return bcrypt.checkpw(password.encode(), hashed_password)
+
+def verify_user(username, password):
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            # Query to get user details including hashed password
+            query = "SELECT password, role FROM Users WHERE username = %s"
+            cursor.execute(query, (username,))
+            result = cursor.fetchall()
+            
+            if result and verify_password(password, result['password'].encode()):
+                return result['role']
+            return None
+    finally:
+        connection.close()
+
+def create_user(username, password, role):
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            hashed_password = hash_password(password)
+            sql = "INSERT INTO Users (username, password, role) VALUES (%s, %s, %s)"
+            cursor.execute(sql, (username, hashed_password, role))
+            connection.commit()
+            print("User created successfully.")
+    finally:
+        connection.close()
+
+def update_user_password(username, new_password):
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            hashed_password = hash_password(new_password)
+            sql = "UPDATE Users SET password = %s WHERE username = %s"
+            cursor.execute(sql, (hashed_password, username))
+            connection.commit()
+            print("Password updated successfully.")
+    finally:
+        connection.close()
+
+def delete_user(username):
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            sql = "DELETE FROM Users WHERE username = %s"
+            cursor.execute(sql, (username,))
+            connection.commit()
+            print("User deleted successfully.")
+    finally:
+        connection.close()
 
 def create_apt(data):
     connection = get_connection()
@@ -324,11 +383,18 @@ def register_patient(data):
                 INSERT INTO patients (First_Name, Last_Name, Date_of_Birth, Gender, Email, Address, Password)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
+            sql_user = """
+                INSERT INTO users (username, password, role)
+                VALUES (%s, %s, %s)
+                
+            """
             cursor.execute(sql_patient, (
                 data['first_name'], data['last_name'], data['dob'], data['gender'],
                 data['email'], data['address'], hashed_password
             ))
-
+            cursor.execute(sql_user, (
+                data['email'], hashed_password, "patient"
+            ))
             # Get the last inserted Patient_ID
             patient_id = cursor.lastrowid
 
@@ -355,9 +421,16 @@ def register_doctor(data):
                 INSERT INTO doctors (First_Name, Last_Name, Phone_Number, Email, Dept_ID, Password)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """
+            sql_user1 = """
+                INSERT INTO users (username, password, role)
+                VALUES (%s, %s, %s)
+            """
             cursor.execute(sql, (
                 data['first_name'], data['last_name'], data['phone_number'],
                 data['email'], data['dept_id'], hashed_password
+            ))
+            cursor.execute(sql_user1, (
+                data['email'], hashed_password, "doctor"
             ))
             connection.commit()
             print("Doctor registered successfully.")
@@ -462,9 +535,121 @@ def get_all_records():
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "CALL rec_pre2();"
+            sql = "CALL rec_pre5();"
             cursor.execute(sql)
             records = cursor.fetchall()
             return records
+    finally:
+        connection.close()
+
+def get_doctor_appointments(doctor_id):
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            query = "SELECT * FROM Appointments WHERE doctor_id = %s"
+            cursor.execute(query, (doctor_id,))
+            appointments = cursor.fetchall()
+            if not appointments:
+                print("No appointments found for this doctor.")
+            return appointments
+    finally:
+        connection.close()
+
+def get_patient_records_for_doctor(doctor_id, patient_id):
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            query = """
+                SELECT * FROM Medical_Record 
+                WHERE patient_id = %s 
+                AND EXISTS (
+                    SELECT 1 FROM Doctors WHERE doctor_id = %s
+                )
+            """
+            cursor.execute(query, (patient_id, doctor_id))
+            records = cursor.fetchall()
+            if not records:
+                print("No medical records found for this patient.")
+            return records
+    finally:
+        connection.close()
+
+def create_prescription(doctor_id, patient_id, medication_details):
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            query = """
+                INSERT INTO Prescriptions 
+                (doctor_id, patient_id, medication_details, date)
+                VALUES (%s, %s, %s, NOW())
+            """
+            cursor.execute(query, (doctor_id, patient_id, medication_details))
+            connection.commit()
+            print("Prescription created successfully.")
+    finally:
+        connection.close()
+
+def update_doctor_schedule(doctor_id, new_schedule):
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            query = "UPDATE Doctors SET schedule = %s WHERE doctor_id = %s"
+            cursor.execute(query, (new_schedule, doctor_id))
+            connection.commit()
+            print("Schedule updated successfully.")
+    finally:
+        connection.close()
+
+def get_patient_appointments(patient_id):
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            query = "SELECT * FROM Appointments WHERE patient_id = %s"
+            cursor.execute(query, (patient_id,))
+            appointments = cursor.fetchall()
+            if not appointments:
+                print("No appointments found for this patient.")
+            return appointments
+    finally:
+        connection.close()
+
+def get_medical_records(patient_id):
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            query = "SELECT * FROM Medical_Record WHERE patient_id = %s"
+            cursor.execute(query, (patient_id,))
+            records = cursor.fetchall()
+            if not records:
+                print("No medical records found for this patient.")
+            return records
+    finally:
+        connection.close()
+
+def book_appointment(patient_id, doctor_id, date_time):
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            query = """
+                INSERT INTO Appointments 
+                (patient_id, doctor_id, date_time, status)
+                VALUES (%s, %s, %s, 'Pending')
+            """
+            cursor.execute(query, (patient_id, doctor_id, date_time))
+            connection.commit()
+            print("Appointment booked successfully.")
+    finally:
+        connection.close()
+
+def get_prescriptions(patient_id):
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            query = "SELECT * FROM Prescriptions WHERE patient_id = %s"
+            cursor.execute(query, (patient_id,))
+            prescriptions = cursor.fetchall()
+            if not prescriptions:
+                print("No prescriptions found for this patient.")
+            return prescriptions
     finally:
         connection.close()
