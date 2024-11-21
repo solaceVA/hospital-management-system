@@ -348,12 +348,25 @@ def show_admin_interface():
 
     with tab7:
         st.header("Medical Records")
-        records = get_all_records()
-        if records:
-            df = pd.DataFrame(records)
-            st.dataframe(df)
-        else:
-            st.write("No medical records found.")
+    
+    # Fetch and display all medical records initially
+        if st.button("View Records"):
+            records = get_all_records()
+            if records:
+                df = pd.DataFrame(records)
+                st.dataframe(df)
+            else:
+                st.write("No medical records found.")
+        
+        # Add a Refresh button to reload the records
+        if st.button("Refresh Table"):
+            records = get_all_records()
+            if records:
+                df = pd.DataFrame(records)
+                st.dataframe(df)
+            else:
+                st.write("No medical records found.")
+        
         st.subheader("Create a new medical record")
         patient_id = st.number_input("Patient_ID", min_value=0)
         doctor_id = st.number_input("Doctor_ID", min_value=0)
@@ -375,22 +388,23 @@ def show_admin_interface():
             date = None
             diagnosis = ""
             treatment = ""
-        st.subheader("Update diagnosis")
-        record_id = st.number_input("Record ID", min_value=0)
-        diagnosis = st.text_area("New Diagnosis")
-        if st.button("Update Diagnosis"):
-            update_diagnosis(record_id, diagnosis)
-            st.success("Diagnosis updated successfully.")
-            record_id = 0
-            diagnosis = ""
-        st.subheader("Update treatment")
-        record_id = st.number_input("Record_ID", min_value=0)
-        treatment = st.text_area("New Treatment")
-        if st.button("Update Treatment"):
-            update_treatment(record_id, treatment)
-            st.success("Treatment updated successfully.")
-            record_id = 0
-            treatment = ""
+
+            st.subheader("Update diagnosis")
+            record_id = st.number_input("Record ID", min_value=0)
+            diagnosis = st.text_area("New Diagnosis")
+            if st.button("Update Diagnosis"):
+                update_diagnosis(record_id, diagnosis)
+                st.success("Diagnosis updated successfully.")
+                record_id = 0
+                diagnosis = ""
+            st.subheader("Update treatment")
+            record_id = st.number_input("Record_ID", min_value=0)
+            treatment = st.text_area("New Treatment")
+            if st.button("Update Treatment"):
+                update_treatment(record_id, treatment)
+                st.success("Treatment updated successfully.")
+                record_id = 0
+                treatment = ""
 
 def show_doctor_interface(doctor_id):
     tab1, tab2, tab3 = st.tabs(["My Appointments", "Patient Records", "Prescriptions"])
@@ -444,6 +458,7 @@ def show_doctor_interface(doctor_id):
                 prescription_ID = 0
 
 def show_patient_interface(patient_id):
+    patient_id = patient_id - 3
     tab1, tab2, tab3 = st.tabs(["My Appointments", "Medical Records", "Bills"])
 
     with tab1:
@@ -477,11 +492,11 @@ def show_patient_interface(patient_id):
     with tab3:
         st.header("My Bills")
         bills = get_bills(patient_id)
-        if bills:
-            df = pd.DataFrame(bills)
-            st.dataframe(df)
+        df = pd.DataFrame(bills)
+        st.dataframe(df)
 
-        total = get_totals(patient_id)
-        st.info(f"Total outstanding amount: ${total}")
+        if st.button("Get Total Amount"):
+            total = get_totals(patient_id)
+            st.write("Total amount:"f"{total}")
 
 main()
