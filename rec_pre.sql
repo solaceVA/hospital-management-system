@@ -1,5 +1,5 @@
 DELIMITER //
-        CREATE PROCEDURE rec_pre2()
+        CREATE PROCEDURE rec_pre()
         BEGIN
             SELECT 
                 nr.Record_ID,
