@@ -144,11 +144,8 @@ def get_bills(data):
         with connection.cursor() as cursor:
             sql = "SELECT * FROM Bills WHERE Patient_ID = %s"
             cursor.execute(sql, (data,))
-            bill = cursor.fetchone()
-            if not bill:
-                print("Bill not found.")
-            else:
-                print(bill)
+            bill = cursor.fetchall()
+            return bill
     finally:
         connection.close()
 
@@ -184,7 +181,7 @@ def get_totals(total_patient_id):
                 WHERE Patient_ID = %s
             """
             cursor.execute(sql, (total_patient_id,))
-            res = cursor.fetchone()
+            res = cursor.fetchall()
             
             # Check if res is None or res[0] is None
             if res is None or res[0] is None:
@@ -535,7 +532,7 @@ def get_all_records():
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
-            sql = "CALL rec_pre8();"
+            sql = "CALL rec_pre();"
             cursor.execute(sql)
             records = cursor.fetchall()
             return records
@@ -581,8 +578,6 @@ def get_patient_appointments(patient_id):
             query = "SELECT * FROM Appointments WHERE patient_id = %s"
             cursor.execute(query, (patient_id,))
             appointments = cursor.fetchall()
-            if not appointments:
-                print("No appointments found for this patient.")
             return appointments
     finally:
         connection.close()
@@ -594,8 +589,6 @@ def get_medical_records(patient_id):
             query = "SELECT * FROM Medical_Record WHERE patient_id = %s"
             cursor.execute(query, (patient_id,))
             records = cursor.fetchall()
-            if not records:
-                print("No medical records found for this patient.")
             return records
     finally:
         connection.close()
